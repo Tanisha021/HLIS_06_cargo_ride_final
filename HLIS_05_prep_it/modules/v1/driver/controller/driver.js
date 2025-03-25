@@ -14,7 +14,8 @@ const { email_id } = require("../../../../language/en");
 
 class User {
     async signup(req, res) {
-        // { "user_name": "rakhi", "email_id": "ra@example.com", "phone_number": "6214872340", "code_id": 1, "password_": "mypassword1", "device_type": "Android", "os_version": "13.0", "app_version": "1.2.0", "time_zone": "2025-03-10T10:30:00Z" }
+        try{
+                // { "user_name": "rakhi", "email_id": "ra@example.com", "phone_number": "6214872340", "code_id": 1, "password_": "mypassword1", "device_type": "Android", "os_version": "13.0", "app_version": "1.2.0", "time_zone": "2025-03-10T10:30:00Z" }
         const request_data = JSON.parse(common.decryptPlain(req.body));
         const rules = validationRules.signup;
         let message = {
@@ -42,6 +43,13 @@ class User {
         
         const responseData = await userModel.signup(request_data);
         return common.response(res, responseData);
+        }catch(error){
+            console.error("Error in login:", error);
+            return common.response(res, {
+                code: response_code.OPERATION_FAILED,
+                message: t('rest_keywords_something_went_wrong') + error
+            });
+        }
     }
 
     async login(req, res) {

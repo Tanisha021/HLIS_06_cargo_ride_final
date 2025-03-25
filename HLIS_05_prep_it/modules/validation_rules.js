@@ -1,4 +1,5 @@
 const { phone_number } = require("../language/en");
+const { report } = require("./v1/user/models/user-model");
 
 const checkValidatorRules = {
 
@@ -108,7 +109,18 @@ const checkValidatorRules = {
         startTime: "required",
         endTime: "required",
         radius_km: "required"
-    }
+    },
+    report:{
+        order_id: "required",
+        subject: "required",
+        description: "required"
+    },
+    add_driver_rating:{
+        order_id: "required",
+        rating: "required",
+        review: "required"
+        
+    },
     
 
 

@@ -1,7 +1,11 @@
 
 <!DOCTYPE html>
 <?php 
-$mysqli = new mysqli("","","","");
+$DB_HOST="localhost";
+$DB_USER="root";
+$DB_PASSWORD="12345678";
+$DB_DATABASE="db_cargo_ride";
+$mysqli = new mysqli($DB_HOST, $DB_USER, $DB_PASSWORD, $DB_DATABASE);
 
 if(isset($_SESSION["login_sess"])) 
 {
@@ -27,10 +31,10 @@ if(isset($_SESSION["login_sess"]))
           {
             $token= $_GET['token'];
 
-            $fetchresultok = mysqli_query($mysqli, "SELECT email FROM pass_reset WHERE token='$token'");
+            $fetchresultok = mysqli_query($mysqli, "SELECT email_id FROM tbl_forgot_password_driver WHERE otp='$token'");
             if($res = mysqli_fetch_array($fetchresultok))
             {
-              $email= $res['email']; 
+              $email= $res['email_id']; 
             }
               if(isset($email) != '' ) {
                 $emailtok=$email;
@@ -44,10 +48,6 @@ if(isset($_SESSION["login_sess"]))
 
 
           }
-
-    
-
-
 
    //form for submit 
     if(isset($_POST['sub_set'])){
@@ -67,10 +67,10 @@ if(isset($_SESSION["login_sess"]))
          if(strlen($password)>50){ // Max 
             $error[] = 'Password: Max length 50 Characters Not allowed';
         }
-        $fetchresultok = mysqli_query($mysqli, "SELECT email FROM pass_reset WHERE token='$token'");
+        $fetchresultok = mysqli_query($mysqli, "SELECT email_id FROM tbl_forgot_password_driver WHERE otp='$token'");
           if($res = mysqli_fetch_array($fetchresultok))
           {
-            $email= $res['email']; 
+            $email= $res['email_id']; 
           }
             if(isset($email) != '' ) {
               $emailtok=$email;
@@ -85,12 +85,12 @@ if(!isset($error)){
     $options = array("cost"=>4);
     //$password = password_hash($password,PASSWORD_BCRYPT,$options);
     $password = md5($password);
-    $resultresetpass= mysqli_query($mysqli, "UPDATE tbl_user SET password='$password' WHERE email='$emailtok'"); 
+    $resultresetpass= mysqli_query($mysqli, "UPDATE tbl_user SET password_='$password' WHERE email_id='$emailtok'"); 
     if($resultresetpass) 
     { 
            $success="<div class='successmsg'><span style='font-size:100px;'>&#9989;</span> <br> Your password has been updated successfully.. <br> <a href='login.php' style='color:#fff;'>Login here... </a> </div>";
 
-          $resultdel = mysqli_query($mysqli, "DELETE FROM pass_reset WHERE token='$token'");
+          $resultdel = mysqli_query($mysqli, "DELETE FROM tbl_forgot_password_driver WHERE otp='$token'");
           $hide=1;
     }
 } 

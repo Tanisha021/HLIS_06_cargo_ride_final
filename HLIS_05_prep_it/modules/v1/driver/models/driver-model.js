@@ -21,7 +21,6 @@ class UserModel {
 
             let userData;
 
-            // Check if user already exists
             const existingUser = signup_type === 'S'
                 ? await common.findExistingDriver(database, email_id, phone_number)
                 : await common.findExistingDriver(database, email_id);
@@ -65,9 +64,41 @@ class UserModel {
             const updateOtpQuery = `UPDATE tbl_driver SET otp = ?, is_profile_completed = 0 WHERE driver_id = ?`;
             await database.query(updateOtpQuery, [otp_, insertResult.insertId]);
 
-            // Fetch user details
+            const subject = "Cargo Rider - OTP for Verification";
+            const message = `Your OTP for verification is ${otp_}`;
+            const email = request_data.email_id;
+
+            try {
+                await common.sendMail(subject, email, message);
+                console.log("OTP email sent successfully!");
+            } catch (error) {
+                console.error("Error sending OTP email:", error);
+            }
+
             const userFind = `SELECT full_name FROM tbl_driver WHERE driver_id = ? AND is_active = 1 AND is_deleted = 0`;
             const [user] = await database.query(userFind, [insertResult.insertId]);
+
+            
+                const subject_email = "Welcome to Cargo Rider!";
+                const message_email = `
+                    Dear User, 
+
+                    Welcome to Cargo Rider! We're excited to have you onboard. 
+                    Your account has been successfully created. You can now start using our platform for seamless cargo transportation.
+                    If you ever need assistance, feel free to reach out to our support team.
+
+                    Happy Riding!
+
+                    Best Regards,  
+                    Cargo Rider Team
+                `;
+
+                try {
+                    await common.sendMail(subject_email, email, message_email);
+                    console.log("Welcome Email Sent Success");
+                } catch (error) {
+                    console.error("Error sending Welcome email:", error);
+                }
 
             return {
                 code: response_code.SUCCESS,
@@ -271,7 +302,7 @@ class UserModel {
 
             const identifierField = user.email_id === emailOrPhone ? "email_id" : "phone_number";
             const identifierValue = user.email_id === emailOrPhone ? user.email_id : user.phone_number;
-
+            console.log("-------",typeof otp)
             const insertOtpQuery = `
                 INSERT INTO tbl_forgot_password_driver (${identifierField}, otp, created_at, expires_at) 
                 VALUES (?, ?, NOW(), DATE_ADD(NOW(), INTERVAL 10 MINUTE)) 
@@ -279,6 +310,18 @@ class UserModel {
                 otp = VALUES(otp), created_at = NOW(), expires_at = DATE_ADD(NOW(), INTERVAL 10 MINUTE)`;
     
             await database.query(insertOtpQuery, [identifierValue, otp]);
+            console.log("-------",typeof otp)
+             const url = "http://localhost:8000/resetemailpassword.php?token=" + otp;
+             const subject = "Cargo Rider - Reset Password";
+             const message = `Click on the link to reset your password: ${url}`;
+             const email = request_data.email_id;
+
+             try {
+                 await common.sendMail(subject, email, message);
+                 console.log("Reset Password Email Sent Success");
+             } catch (error) {
+                 console.error("Error sending Reset Password email:", error);
+             }
     
             return {
                 code: response_code.SUCCESS,
@@ -376,7 +419,19 @@ class UserModel {
                 `;
                 await database.query(updateDeviceQuery, [deviceToken, userToken, driver_id]);
             }
-    
+            
+            const subject_email = "Cargo Rider | Your Email has been verified!";
+            const message_email = `
+                        OTP Verification was successful ! You can now login to our CARGO RIDER APP
+                    `;
+
+                    try {
+                        await common.sendMail(subject_email, request_data.email_id, message_email);
+                        console.log("Verify Email Sent Success");
+                    } catch (error) {
+                        console.error("Error sending Verify email:", error);
+                    }
+
             return {
                 code: response_code.SUCCESS,
                 message: "OTP verified successfully",
@@ -617,6 +672,18 @@ class UserModel {
             const insertVechicleData = `INSERT INTO tbl_vehicle_details SET ?`;
             const [newvehicle] = await database.query(insertVechicleData, [vehicle_data]);
 
+            const vehicle_doc_data={
+                veh_det_id: veh_det_id,
+                adhar_card_front: files.adhar_card_front ? files.adhar_card_front[0].path : null,
+                adhar_card_back: files.adhar_card_back ? files.adhar_card_back[0].path : null,
+                pan_card_front: files.pan_card_front ? files.pan_card_front[0].path : null,
+                pan_card_back: files.pan_card_back ? files.pan_card_back[0].path : null,
+                driving_lic_card_front: files.driving_lic_card_front ? files.driving_lic_card_front[0].path : null,
+                driving_lic_card_back: files.driving_lic_card_back ? files.driving_lic_card_back[0].path : null
+            }
+            const insertDoc = `INSERT INTO tbl_vehicle_doc SET ?`;
+            await database.query(insertDoc, [vehicle_doc_data]);
+
             return {
                 code: response_code.SUCCESS,
                 message: t('vehicle_data_added'),
@@ -764,12 +831,11 @@ class UserModel {
             const veh_det_id = vehicle[0].veh_det_id;
             const updateOrder = `UPDATE tbl_delivery_order SET status = 'accepted', delivery_status = 'confirmed',veh_det_id = ? WHERE order_id = ?`;
             await database.query(updateOrder, [veh_det_id, order_id]);
+
             return {
                 code: response_code.SUCCESS,
                 message: t('order_accepted_successfully')
             }
-
-            
 
         }catch(error){
             return {
@@ -818,6 +884,7 @@ class UserModel {
             const updateOrder = `UPDATE tbl_delivery_order SET delivery_status = ?,updated_at=NOW() WHERE order_id = ?`;
             await database.query(updateOrder, [delivery_status, order_id]);
 
+        await database.query(notificationQuery, notificationValues);
             return{
                 code: response_code.SUCCESS,
                 message: t('delivery_status_updated_successfully')
@@ -862,7 +929,6 @@ class UserModel {
                     message: t('invalid_otp')
                 };
             }
-
             const updateOrder = `UPDATE tbl_delivery_order SET delivery_status = 'delivered',status ='completed' updated_at=NOW() WHERE order_id = ?`;
             await database.query(updateOrder, [order_id]);
 
@@ -878,7 +944,9 @@ class UserModel {
                     earnings_rs = ?, updated_at = NOW()
                     WHERE order_id = ?
                 `, [order_points, earnings_rs, order_id]);
-        
+                    
+            await database.query(notificationQuery, notificationValues);
+
                 return {
                     code: response_code.SUCCESS,
                     message: t('otp_verified_successfully'),

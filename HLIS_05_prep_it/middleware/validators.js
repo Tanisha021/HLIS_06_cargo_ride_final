@@ -124,11 +124,19 @@ const middleware = {
     },
     
     extractHeaderLanguage:function(req,res,callback){
+
         // return req.headers["accept-language"] || "en";
         var headerLang = req.headers['accept-language'] && req.headers['accept-language'].trim() !== ""
         ? req.headers['accept-language'] 
         : "en";  // Default to English if not provided
-    
+        
+        if (req.headers['content-type'] && req.headers['content-type'].includes('multipart/form-data')) {
+            if (req.body && typeof req.body === 'object' && !req.body.userLang) {
+                req.lang = headerLang;
+            }
+            callback();
+        }
+        
     req.lang = headerLang;
 
     // Assign the correct language object based on the header

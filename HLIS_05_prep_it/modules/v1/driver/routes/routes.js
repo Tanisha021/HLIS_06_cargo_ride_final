@@ -1,5 +1,5 @@
 const User = require('../controller/driver');  
-
+const { vehicleDocumentUpload } = require('../../../../middleware/uploadFiles');
 const customerRoute = (app) => {
     //authentication
      app.post("/v1/driver/signup", User.signup); 
@@ -12,7 +12,14 @@ const customerRoute = (app) => {
      app.post("/v1/driver/change-password", User.changePassword);
 
     
-    app.post("/v1/driver/add_vehicle_data", User.add_vehicle_data);
+     app.post("/v1/driver/add_vehicle_data", vehicleDocumentUpload.fields([
+        { name: 'adhar_card_front', maxCount: 1 },
+        { name: 'adhar_card_back', maxCount: 1 },
+        { name: 'pan_card_front', maxCount: 1 },
+        { name: 'pan_card_back', maxCount: 1 },
+        { name: 'driving_lic_card_front', maxCount: 1 },
+        { name: 'driving_lic_card_back', maxCount: 1 }
+    ]), User.add_vehicle_data);
     app.post("/v1/driver/show-nearby-orders", User.show_nearby_orders);
     app.post("/v1/driver/accept-order", User.acceptOrder);
     app.post("/v1/driver/delivery-status", User.deliveryStatus);

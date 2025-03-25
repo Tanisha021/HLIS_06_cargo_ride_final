@@ -376,7 +376,6 @@ class User {
     }
 
     async cancelOrder(req, res) {
-        try{
             try{
              
                 const request_data = JSON.parse(common.decryptPlain(req.body));
@@ -407,16 +406,9 @@ class User {
                     message: t('rest_keywords_something_went_wrong') + error
                 });
         }
-        }catch(error){
-            return common.response(res, {
-                code: response_code.OPERATION_FAILED,
-                message: t('rest_keywords_something_went_wrong') + error
-            });
         }
-    }
 
     async contactUs(req, res) {
-        try{
             try{
              
                 const request_data = JSON.parse(common.decryptPlain(req.body));
@@ -452,16 +444,78 @@ class User {
                     message: t('rest_keywords_something_went_wrong') + error
                 });
         }
-        }catch(error){
-            return common.response(res, {
-                code: response_code.OPERATION_FAILED,
-                message: t('rest_keywords_something_went_wrong') + error
-            });
+        }
+    async report(req, res) {
+            try{
+             
+                const request_data = JSON.parse(common.decryptPlain(req.body));
+        
+                console.log(request_data);
+                const rules = validationRules.report;
+        
+                let message = {
+                    required: req.language.required,
+                    order_id: t("order_id"),
+                    subject: t("subject"),
+                    description: t("description")
+                };
+                
+                let keywords = {
+                    order_id: t("order_id"),
+                    subject: t("subject"),
+                    description: t("description")
+                };
+            const valid = middleware.checkValidationRules(req,res,request_data,rules,message, keywords)
+            console.log("Valid",valid);
+            if (!valid) return;
+            const responseData = await userModel.report(request_data,req.user_id);
+            
+            // Send response
+            return common.response(res, responseData);
+        
+            }catch(error){
+                return common.response(res, {
+                    code: response_code.OPERATION_FAILED,
+                    message: t('rest_keywords_something_went_wrong') + error
+                });
+        }
+    }
+    async add_driver_rating(req, res) {
+            try{
+             
+                const request_data = JSON.parse(common.decryptPlain(req.body));
+        
+                console.log(request_data);
+                const rules = validationRules.add_driver_rating;
+        
+                let message = {
+                    required: req.language.required,
+                    rating: t("rating"),
+                    review: t("review"),
+                    order_id: t("order_id")
+                };
+                
+                let keywords = {
+                    rating: t("rating"),
+                    review: t("review"),
+                    order_id: t("order_id")
+                };
+            const valid = middleware.checkValidationRules(req,res,request_data,rules,message, keywords)
+            console.log("Valid",valid);
+            if (!valid) return;
+            const responseData = await userModel.add_driver_rating(request_data,req.user_id);
+
+            return common.response(res, responseData);
+        
+            }catch(error){
+                return common.response(res, {
+                    code: response_code.OPERATION_FAILED,
+                    message: t('rest_keywords_something_went_wrong') + error
+                });
         }
     }
 
     async listUserOrders(req,res){
-        try{
             try{
              
                 const request_data = JSON.parse(common.decryptPlain(req.body));
@@ -488,12 +542,6 @@ class User {
                     code: response_code.OPERATION_FAILED,
                     message: t('rest_keywords_something_went_wrong') + error
                 });
-        }
-        }catch(error){
-            return common.response(res, {
-                code: response_code.OPERATION_FAILED,
-                message: t('rest_keywords_something_went_wrong') + error
-            });
         }
     }
 

@@ -17,6 +17,8 @@ const customerRoute = (app) => {
     app.post("/v1/user/contact-us", User.contactUs);
     app.post("/v1/user/cancel-order", User.cancelOrder);
     app.post("/v1/user/list-user-orders", User.listUserOrders);
+    app.post("/v1/user/report", User.report);
+    app.post("/v1/user/add-driver-rating", User.add_driver_rating);
     app.post("/v1/user/logout", User.logout);
     app.post("/v1/user/delete", User.delete);
 

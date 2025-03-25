@@ -2,7 +2,9 @@ const database = require("../config/database");
 var cryptLib = require("cryptlib");
 var constants = require("../config/constant");
 const {default: localizify} = require('localizify');
+const response_code = require("../utilities/response-error-code");
 const { t } = require("localizify");
+const nodemailer = require("nodemailer");
 class common{
     generateOTP(){
         console.log("Hello");
@@ -73,12 +75,27 @@ class common{
             };
         }
     
-        const otp_ = common.generateOtp(4);
-        const updateOtpQuery = `UPDATE tbl_driver SET otp = ? WHERE driver_id = ?`;
-        await database.query(updateOtpQuery, [otp_, user.user_id]);
+        const otp_ = this.generateOTP();
+        const subject = "Cargo Rider - OTP for Verification";
+        const message = `Your OTP for verification is ${otp_}`;
+        const email = user.email_id;
+        console.log("USERR", user);
+        console.log("emailllllll:", email);
+        // console.log("driver_id---------:", driver_id);
+        console.log("user.driver_id",user.driver_id);
+        
+        const updateOtpQuery = `UPDATE tbl_driver SET otp = ? WHERE email_id = ?`;
+        await database.query(updateOtpQuery, [otp_,email]);
+
+        try {
+            await this.sendMail(subject, email, message);
+            console.log("OTP email sent successfully!");
+        } catch (error) {
+            console.error("Error sending OTP email:", error);
+        }
     
         return {
-            code: response_code.VERIFICATION_PENDING,
+            code: response_code.SUCCESS,
             message: t('otp_sent_please_verify_acc'),
             data: user.email_id
         };
@@ -163,11 +180,11 @@ class common{
             return error.message || error, [];
         }
     }
+
     async getDriverDetailLogin(user_id, login_type) {
         console.log("User ID:", user_id);
         console.log("Login Type:", login_type);
-        
-        // Modified to get user details directly from tbl_user without joining tbl_socials
+
         const selectUserQuery = "SELECT * FROM tbl_driver WHERE driver_id = ? ";
         
         try {
@@ -219,6 +236,55 @@ class common{
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return R * c;
     }
+
+    async requestValidation(v) {
+        if (v.fails()) {
+            const Validator_errors = v.getErrors();
+            const error = Object.values(Validator_errors)[0][0];
+            return {
+                code: true,
+                message: error
+            };
+        } 
+        return {
+            code: false,
+            message: ""
+        };
+    }
+
+    async sendMail(subject, to_email, message) {
+        try {
+            if (!to_email || to_email.trim() === "") {
+                throw new Error("Recipient email is empty or undefined!");
+            }
+
+            const transporter = nodemailer.createTransport({
+                service: 'gmail',
+                host: 'smtp.gmail.com',
+                port: 587,
+                secure: false,
+                auth: {
+                    user: constants.mailer_email,
+                    pass: constants.mailer_password
+                }
+            });
+
+            const mailOptions = {
+                from: constants.from_email,
+                to: to_email,
+                subject: subject,
+                text: message
+            };
+
+            const info = await transporter.sendMail(mailOptions);
+            console.log(info)
+;
+            return { success: true, info };
+        } catch (error) {
+            console.log(error);
+            return { success: false, error };
+        }
+    }
   
     async encrypt (data) {
         try{
@@ -230,22 +296,6 @@ class common{
         }
     } 
 
-    // decryptPlain (req, res, next) {
-    //     console.log(req.body,'a');
-        
-    //     if(req.body && Object.keys(req.body).length != 0){
-    //         console.log('entry');
-            
-    //         req.body = JSON.parse(cryptLib.decrypt(req.body, constants.encryptionKey, constants.encryptionIV));
-    //         console.log(req.body);
-            
-    //         return next();
-    //     }else{
-    //         console.log('else');
-            
-    //         return next();
-    //     }
-    // }
     decryptPlain(data) {
         console.log('data======c',data);
         

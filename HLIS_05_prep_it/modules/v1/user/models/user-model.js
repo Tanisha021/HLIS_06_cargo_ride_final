@@ -268,8 +268,8 @@ class UserModel {
         try{
             const order_id = request_data.order_id;
             const getOrder = `SELECT * FROM tbl_delivery_order WHERE order_id = ? AND user_id = ?`;
-                const [order] = await database.query(getOrder, [order_id, user_id]);
-        
+            const [order] = await database.query(getOrder, [order_id, user_id]);
+            
                 if (order.length === 0) {
                     return {
                         code: response_code.NOT_FOUND,
@@ -278,17 +278,22 @@ class UserModel {
                 }
         
                 const currentStatus = order[0].status;
-                const vehicle_id = order[0].vehicle_id;
+                const current_delivery_status = order[0].delivery_status;
+                const vehicle_id = order[0].veh_det_id;
                 const cancellableStatuses = ['pending', 'accepted'];
+                const cancellable_delivery_statuses = ['confirmed'];
+
+                const [driver] = await database.query(`SELECT * FROM tbl_vehicle_details WHERE veh_det_id = ?`, [vehicle_id]);
+                const driver_id = driver[0].driver_id;
         
-                if (currentStatus === 'cancelled') {
+                if (currentStatus === 'cancelled'){
                     return {
                         code: response_code.OPERATION_FAILED,
                         message: t('order_already_cancelled')
                     };
                 }
         
-                if (!cancellableStatuses.includes(currentStatus)) {
+                if (!cancellableStatuses.includes(currentStatus) && !cancellable_delivery_statuses.includes(current_delivery_status)) {
                     return {
                         code: response_code.OPERATION_FAILED,
                         message: t('order_cannot_be_cancelled')
@@ -299,17 +304,31 @@ class UserModel {
                     await database.query(`
                         UPDATE tbl_vehicle_availability 
                         SET is_available = 1, estimated_arrival_minutes = NULL 
-                        WHERE vehicle_id = ?
+                        WHERE veh_det_id = ?
                     `, [vehicle_id]);
                 }
 
                 const cancel_order = `
                     UPDATE tbl_delivery_order 
-                    SET status = 'cancelled', is_canceled = 1 
+                    SET status = 'cancelled' 
                     WHERE order_id = ? AND user_id = ?
                 `;
                 await database.query(cancel_order, [order_id, user_id]);
-        
+                
+                if(cancellable_delivery_statuses.includes(current_delivery_status)){
+                    const notificationQuery = `
+                    INSERT INTO tbl_notification_driver
+                    (title, descriptions, driver_id, notification_type) 
+                    VALUES (?, ?, ?, ?)
+                    `;
+
+                    const title = "Order Cancelled";
+                    const descriptions = `Order #${order_id} has been cancelled successfully.`;
+                    const notificationType = "cancel";
+                    await database.query(notificationQuery, [title, descriptions, driver_id, notificationType]);
+
+                }
+
                 return {
                     code: response_code.SUCCESS,
                     message: t('order_cancelled_successfully')
@@ -320,7 +339,7 @@ class UserModel {
                 message: t('some_error_occurred'),
                 data: error
             };
-        }
+        }   
     }
 
     async contactUs(request_data,user_id){
@@ -418,7 +437,6 @@ class UserModel {
             };
         }
     }
-    
 
     async logout(request_data,user_id){
         try{
@@ -490,6 +508,159 @@ class UserModel {
             };
         }
     }
+
+    async report(request_data,user_id){
+        try{
+            const {order_id,subject,description,images=[]}=request_data;
+            if (!order_id || !subject || !description || !user_id) {
+                return callback(common.encrypt({
+                    code: response_code.OPERATION_FAILED,
+                    message: t('missing_required_fields')
+                }));
+            }
+
+            const [order] = await database.query(`SELECT status, user_id FROM tbl_delivery_order WHERE order_id = ?`, [order_id]);
+            if(!order && order.length===0){
+                return {
+                    code: response_code.NOT_FOUND,
+                    message: t('order_not_found')
+                };
+            }
+            if (order[0].status !== 'completed') {
+                return {
+                    code: response_code.OPERATION_FAILED,
+                    message: t('order_not_completed')
+                };
+            }
+            if (order[0].user_id !== user_id) {
+                return {
+                    code: response_code.OPERATION_FAILED,
+                    message: t('unauthorized_user')
+                };
+            }
+            const [report] = await database.query(`SELECT * FROM tbl_report WHERE order_id = ?`, [order_id]);
+            if(report && report.length>0){
+                return {
+                    code: response_code.OPERATION_FAILED,
+                    message: t('report_already_submitted')
+                };
+            }   
+            const data={
+                subject:subject,
+                order_id:order_id,
+                description:description,
+                user_id:user_id,
+                is_active:1,
+                is_deleted:0
+            }
+            const [reportResult] = await database.query(`INSERT INTO tbl_report SET ?`, [data]);
+            const report_id = reportResult.insertId;
+            if (images.length > 0) {
+                const imageValues = images.map(image_name => [image_name, report_id]);
+                await database.query(`
+                    INSERT INTO tbl_image_report (
+                        image_name,
+                        report_id
+                    ) VALUES ?
+                `, [imageValues]);
+            }
+            return {
+                code: response_code.SUCCESS,
+                message: t('report_created_successfully'),
+                data: {
+                    report_id,
+                    order_id
+                }
+            };
+        }catch(error){
+            return {
+                code: response_code.OPERATION_FAILED,
+                message: t('some_error_occurred'),
+                data: error
+            };
+        }
+    }
+
+    async add_driver_rating(request_data, user_id) {
+        try {
+            const { rating, review, order_id } = request_data;
+            console.log(request_data);
+            if (!rating || !review || !order_id) {
+                return {
+                    code: response_code.MISSING_MANDATORY_FIELD,
+                    message: t('missing_mandatory_fields')
+                };
+            }
+
+            const findVehicle = `SELECT veh_det_id FROM tbl_delivery_order WHERE order_id = ? AND status = 'completed' AND delivery_status = 'delivered'`;
+            const [vehicle_data] = await database.query(findVehicle, [order_id]);
+    
+            if (!vehicle_data || vehicle_data.length === 0) {
+                return {
+                    code: response_code.NOT_FOUND,
+                    message: t('vehicle_not_found')
+                };
+            }
+    
+            const vehicle_id = vehicle_data[0].veh_det_id;
+
+            const findDriver = `SELECT driver_id FROM tbl_vehicle_details WHERE veh_det_id = ?`;
+            const [driver_data] = await database.query(findDriver, [vehicle_id]);
+    
+            if (!driver_data || driver_data.length === 0) {
+                return {
+                    code: response_code.NOT_FOUND,
+                    message: t('driver_not_found')
+                };
+            }
+    
+            const driver_id = driver_data[0].driver_id;
+
+            const driverQuery = `SELECT driver_id FROM tbl_driver WHERE driver_id = ?`;
+            const [driverResult] = await database.query(driverQuery, [driver_id]);
+    
+            if (!driverResult || driverResult.length === 0) {
+                return {
+                    code: response_code.NOT_FOUND,
+                    message: t('driver_not_found')
+                };
+            }
+
+            const ratingQuery = `SELECT * FROM tbl_rating_review_driver WHERE driver_id = ? AND user_id = ?`;
+            const [ratingResult] = await database.query(ratingQuery, [driver_id, user_id]);
+    
+            if (ratingResult.length > 0) {
+                return {
+                    code: response_code.ALREADY_EXISTS,
+                    message: t('rating_already_exists')
+                };
+            }
+    
+            const rating_data = {
+                driver_id,
+                user_id,
+                order_id,
+                rating,
+                review,
+            };
+    
+            const insertRating = `INSERT INTO tbl_rating_review_driver SET ?`;
+            await database.query(insertRating, [rating_data]);
+    
+            return {
+                code: response_code.SUCCESS,
+                message: t('rating_added_successfully')
+            };
+    
+        } catch (error) {
+            return {
+                code: response_code.OPERATION_FAILED,
+                message: t('some_error_occurred'),
+                data: error.message
+            };
+        }
+    }
+    
 
 }
 module.exports = new UserModel();
