@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Order Summary</title>
+</head>
+<body style="font-family: Arial, sans-serif;">
+    <h2 style="color: #333;">Order Summary</h2>
+    <p><strong>Order Date:</strong> <%= order_date_time %></p>
+    <p><strong>Delivery Date:</strong> <%= delivery_date_time %></p>
+
+    <h3>Pickup Details:</h3>
+    <p><strong>Location:</strong> <%= pick_up_loc %></p>
+
+    <h3>Drop-off Details:</h3>
+    <p><strong>Location:</strong> <%= drop_off_loc %></p>
+
+    <h3>Sender Details:</h3>
+    <p><strong>Name:</strong> <%= sender.full_name %></p>
+    <p><strong>Email:</strong> <%= sender.email_id %></p>
+    <p><strong>Phone:</strong> <%= sender.phone_number %></p>
+
+    <h3>Receiver Details:</h3>
+    <p><strong>Name:</strong> <%= receiver.full_name %></p>
+    <p><strong>Email:</strong> <%= receiver.email_id %></p>
+    <p><strong>Phone:</strong> <%= receiver.phone_number %></p>
+
+    <h3>Item Details:</h3>
+    <p><strong>Type:</strong> <%= item.package_type_id %></p>
+    <p><strong>Weight:</strong> <%= item.weight_kg %> <%= item.unit %></p>
+    <p><strong>Notes:</strong> <%= item.notes %></p>
+
+    <h3>Payment Summary:</h3>
+    <p><strong>Subtotal:</strong> ₹<%= subtotal %></p>
+    <p><strong>Tax:</strong> ₹<%= tax %></p>
+    <p><strong>Discount:</strong> ₹<%= discount %></p>
+    <p><strong>Total Price:</strong> ₹<%= total_price %></p>
+
+    <h3>Delivery Status:</h3>
+    <p><strong>Status:</strong> <%= order_status %></p>
+    <p><strong>Estimated Time:</strong> <%= time %></p>
+</body>
+</html>

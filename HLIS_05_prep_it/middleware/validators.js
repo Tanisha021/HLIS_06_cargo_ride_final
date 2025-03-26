@@ -134,7 +134,7 @@ const middleware = {
             if (req.body && typeof req.body === 'object' && !req.body.userLang) {
                 req.lang = headerLang;
             }
-            callback();
+            return callback();
         }
         
     req.lang = headerLang;

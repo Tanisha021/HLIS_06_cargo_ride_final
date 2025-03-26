@@ -1,10 +1,17 @@
 const express = require('express');
 const app_routing = require('./modules/app-routing');
 const bodyParser = require('body-parser');
+const ejs = require('ejs');
+const path = require('path');
 const app = express();
 require('dotenv').config();
 const port = process.env.PORT || 3000;
-const path = require("path");
+// Set EJS as the templating engine
+app.set('view engine', 'ejs');  
+app.set('views', path.join(__dirname, 'views'));
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(express.text());
 app.use(express.urlencoded({ extended: true }));
 app.use(bodyParser.urlencoded({ extended: true }));

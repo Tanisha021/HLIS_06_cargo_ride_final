@@ -5,6 +5,7 @@ const md5 = require("md5");
 const {default: localizify} = require('localizify');
 const { t } = require("localizify");
 
+const {forgot_password,sendOTP, welcomeEmail} = require("../../../../template");
 
 class UserModel {
     
@@ -64,9 +65,39 @@ class UserModel {
             const updateOtpQuery = `UPDATE tbl_user SET otp = ?, is_profile_completed = 0 WHERE user_id = ?`;
             await database.query(updateOtpQuery, [otp_, insertResult.insertId]);
 
-            // Fetch user details
+            const subject = "Cargo Rider - OTP for Verification";
+            // const message = `Your OTP for verification is ${otp_}`;
+            const email = request_data.email_id;
+
+            const data={
+                name: request_data.full_name || 'User',
+                otp: otp_
+            }
+
+            try {
+                const htmlMessage = sendOTP(data);
+                await common.sendMail(subject, email, htmlMessage);
+                console.log("OTP email sent successfully!");
+            } catch (error) {
+                console.error("Error sending OTP email:", error);
+            }
+
             const userFind = `SELECT full_name FROM tbl_user WHERE user_id = ? AND is_active = 1 AND is_deleted = 0`;
             const [user] = await database.query(userFind, [insertResult.insertId]);
+
+            // Welcome email to driver
+            const subject_email = "Welcome to Cargo Rider!";
+            const welcomeMessageData = {
+                name: request_data.full_name || "User"
+            }
+
+            try {
+                const htmlMessage = welcomeEmail(welcomeMessageData);
+                await common.sendMail(subject_email, email, htmlMessage);
+                console.log("Welcome Email Sent Success");
+            } catch (error) {
+                console.error("Error sending Welcome email:", error);
+            }
 
             return {
                 code: response_code.SUCCESS,
@@ -279,7 +310,24 @@ class UserModel {
                 otp = VALUES(otp), created_at = NOW(), expires_at = DATE_ADD(NOW(), INTERVAL 10 MINUTE)`;
     
             await database.query(insertOtpQuery, [identifierValue, otp]);
-    
+            const url = "http://localhost:8000/resetemailpasswordUser.php?token=" + otp;
+                const subject = "Cargo Rider - Reset Password";
+                // const message = `Click on the link to reset your password: ${url}`;
+                const email = request_data.email_id;
+
+                const emailData = {
+                    name: request_data.full_name || 'User',
+                    url: url
+                };
+
+                try {
+                    const htmlMessage = forgot_password(emailData);
+                    await common.sendMail(subject, email, htmlMessage);
+                    console.log("Reset Password Email Sent Success");
+                } catch (error) {
+                    console.error("Error sending Reset Password email:", error);
+                }
+                
             return {
                 code: response_code.SUCCESS,
                 message: "OTP sent successfully. Please verify.",

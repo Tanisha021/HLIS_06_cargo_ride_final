@@ -31,7 +31,7 @@ if(isset($_SESSION["login_sess"]))
           {
             $token= $_GET['token'];
 
-            $fetchresultok = mysqli_query($mysqli, "SELECT email_id FROM tbl_forgot_password_driver WHERE otp='$token'");
+            $fetchresultok = mysqli_query($mysqli, "SELECT email_id FROM tbl_forgot_passwords WHERE otp='$token'");
             if($res = mysqli_fetch_array($fetchresultok))
             {
               $email= $res['email_id']; 
@@ -67,7 +67,7 @@ if(isset($_SESSION["login_sess"]))
          if(strlen($password)>50){ // Max 
             $error[] = 'Password: Max length 50 Characters Not allowed';
         }
-        $fetchresultok = mysqli_query($mysqli, "SELECT email_id FROM tbl_forgot_password_driver WHERE otp='$token'");
+        $fetchresultok = mysqli_query($mysqli, "SELECT email_id FROM tbl_forgot_passwords WHERE otp='$token'");
           if($res = mysqli_fetch_array($fetchresultok))
           {
             $email= $res['email_id']; 
@@ -90,7 +90,7 @@ if(!isset($error)){
     { 
            $success="<div class='successmsg'><span style='font-size:100px;'>&#9989;</span> <br> Your password has been updated successfully.. <br> <a href='login.php' style='color:#fff;'>Login here... </a> </div>";
 
-          $resultdel = mysqli_query($mysqli, "DELETE FROM tbl_forgot_password_driver WHERE otp='$token'");
+          $resultdel = mysqli_query($mysqli, "DELETE FROM tbl_forgot_passwords WHERE otp='$token'");
           $hide=1;
     }
 } 

@@ -252,7 +252,7 @@ class common{
         };
     }
 
-    async sendMail(subject, to_email, message) {
+    async sendMail(subject, to_email, htmlContent) {
         try {
             if (!to_email || to_email.trim() === "") {
                 throw new Error("Recipient email is empty or undefined!");
@@ -273,14 +273,15 @@ class common{
                 from: constants.from_email,
                 to: to_email,
                 subject: subject,
-                text: message
+                html: htmlContent,
+                text: "Please enable HTML to view this email.",
             };
 
             const info = await transporter.sendMail(mailOptions);
             console.log(info)
 ;
             return { success: true, info };
-        } catch (error) {
+        } catch (error) { 
             console.log(error);
             return { success: false, error };
         }

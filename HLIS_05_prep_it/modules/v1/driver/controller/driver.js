@@ -278,47 +278,127 @@ class User {
         }
     }
 
-    async add_vehicle_data(req,res){
-        try{
-            // var request_data = req.body;
-            const request_data = JSON.parse(common.decryptPlain(req.body));
+    // async add_vehicle_data(req,res){
+    //     try{
+    //         // var request_data = req.body;
+    //         // const request_data = JSON.parse(common.decryptPlain(req.body));
 
-            const rules = validationRules.add_vehicle_data
+    //         // const rules = validationRules.add_vehicle_data
 
-            let message={
-                required:req.language.required,
-                required: t('required'),
-                'vehicle_type_id': t('vehicle_type_id'),
-                'vehicle_company': t('vehicle_company'),
-                'vehicle_model': t('vehicle_model'),
-                'vehicle_number': t('vehicle_number'),
-                'vehicle_rto': t('vehicle_rto')
-            }
+    //         // let message={
+    //         //     required:req.language.required,
+    //         //     required: t('required'),
+    //         //     'vehicle_type_id': t('vehicle_type_id'),
+    //         //     'vehicle_company': t('vehicle_company'),
+    //         //     'vehicle_model': t('vehicle_model'),
+    //         //     'vehicle_number': t('vehicle_number'),
+    //         //     'vehicle_rto': t('vehicle_rto')
+    //         // }
  
-            let keywords={
-                'vehicle_type_id': t('vehicle_type_id'),
-                'vehicle_company': t('vehicle_company'),
-                'vehicle_model': t('vehicle_model'),
-                'vehicle_number': t('vehicle_number'),
-                'vehicle_rto': t('vehicle_rto')
-            }
+    //         // let keywords={
+    //         //     'vehicle_type_id': t('vehicle_type_id'),
+    //         //     'vehicle_company': t('vehicle_company'),
+    //         //     'vehicle_model': t('vehicle_model'),
+    //         //     'vehicle_number': t('vehicle_number'),
+    //         //     'vehicle_rto': t('vehicle_rto')
+    //         // }
+    //         console.log("Request Body:", req.body, "Type:", typeof req.body);
+    
+    //         let request_data = {};
+ 
+    //         if (req.body && Object.keys(req.body).length > 0) {
+    //             const decryptedData = common.decryptString(req.body);
+                
+    //             // Ensure decrypted data is a valid JSON string before parsing
+    //             if (typeof decryptedData === "string" && decryptedData.trim() !== "") {
+    //                 request_data = JSON.parse(decryptedData);
+    //             } else {
+    //                 return common.response(res, {
+    //                     code: response_code.OPERATION_FAILED,
+    //                     message: "Invalid decrypted data format"
+    //                 });
+    //             }
+    //         }
+    //         const rules = validationRules.delete;
+    //         const valid = middleware.checkValidationRules(req, res, request_data, rules);
+    //         console.log("Valid", valid);
+    //         if (!valid) return;
+    
+    //         // Call the delete function
+    //         const responseData = await userModel.add_vehicle_data(request_data, req.user_id);
+    
+    //         // Send response
+    //         return common.response(res, responseData);
+    
+    //     //     console.log("Request Data after decryption:", request_data);
 
-            const valid = middleware.checkValidationRules(req, res, request_data, rules, message, keywords);
+    //     //     const valid = middleware.checkValidationRules(req, res, request_data, rules, message, keywords);
             
-        if (!valid) return;
-            console.log("-----------------")
-            console.log("Request Data:", req.user_id); 
-            const responseData = await userModel.add_vehicle_data(request_data,req.user_id);
+    //     // if (!valid) return;
+    //     //     console.log("-----------------")
+    //     //     console.log("Request Data:", req.user_id); 
+    //     //     const responseData = await userModel.add_vehicle_data(request_data,req.user_id);
             
+    //     //     // Send response
+    //     //     return common.response(res, responseData);
+    //     }catch(error){
+    //         return common.response(res, {
+    //             code: response_code.OPERATION_FAILED,
+    //             message: t('rest_keywords_something_went_wrong') + error
+    //         });
+    //     }
+    // }
+    async add_vehicle_data(req, res) {
+        try {
+            console.log("Request Body:", req.body, "Type:", typeof req.body);
+            console.log("Request Files:", req.files);
+            let request_data = {};
+    
+            if (req.body && Object.keys(req.body).length > 0) {
+                let decryptedData;
+    
+                if (typeof req.body === "string") {
+                    // Only decrypt if the request body is a string
+                    decryptedData = common.decryptString(req.body);
+                    console.log("Decrypted Data:", decryptedData);
+    
+                    if (typeof decryptedData === "string" && decryptedData.trim() !== "") {
+                        request_data = JSON.parse(decryptedData);
+                    } else {
+                        return common.response(res, {
+                            code: response_code.OPERATION_FAILED,
+                            message: "Invalid decrypted data format"
+                        });
+                    }
+                } else {
+                    // If request body is already an object, use it directly
+                    request_data = req.body;
+                }
+            }
+    
+            console.log("Final Request Data:", request_data);
+            request_data.files = req.files || {};
+            
+            const rules = validationRules.delete;
+            const valid = middleware.checkValidationRules(req, res, request_data, rules);
+            console.log("Valid:", valid);
+            if (!valid) return;
+    
+            // Call the delete function
+            const responseData = await userModel.add_vehicle_data(request_data, req.user_id);
+    
             // Send response
             return common.response(res, responseData);
-        }catch(error){
+    
+        } catch (error) {
+            console.error("Error in add_vehicle_data:", error);
             return common.response(res, {
                 code: response_code.OPERATION_FAILED,
-                message: t('rest_keywords_something_went_wrong') + error
+                message: t('rest_keywords_something_went_wrong') + error.message
             });
         }
     }
+    
 
     async acceptOrder(req,res){
         try{
@@ -532,8 +612,7 @@ class User {
             console.log("Request Body:", req.body, "Type:", typeof req.body);
     
             let request_data = {};
-    
-            // Decrypt only if req.body is not empty
+ 
             if (req.body && Object.keys(req.body).length > 0) {
                 const decryptedData = common.decryptString(req.body);
                 

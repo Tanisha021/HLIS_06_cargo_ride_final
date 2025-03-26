@@ -2,10 +2,16 @@ const common = require("../../../../utilities/common");
 const database = require("../../../../config/database");
 const response_code = require("../../../../utilities/response-error-code");
 const md5 = require("md5");
+// const resul = require("../../../../views")
 const {default: localizify} = require('localizify');
 const { t } = require("localizify");
 const moment = require('moment');
+const ejs = require('ejs');
+const fs = require('fs');
+const path = require('path');
+
 // const response_code=  require('../../../../utilities/response-error-code');
+const {contactUs,orderConfirmationEmail} = require("../../../../template");
 
 class UserModel {
     
@@ -206,9 +212,23 @@ class UserModel {
             const total_price = subtotal + orderData.tax - orderData.discount;
             await database.query(`UPDATE tbl_delivery_order SET distance_km = ?, total_price = ?, subtotal = ? WHERE order_id = ?`, [distance_km, total_price, subtotal, order_id]);
             
+            const getUserQuery = `SELECT full_name, email_id, phone_number, address FROM tbl_user WHERE user_id = ?`;
+            const [senderData] = await database.query(getUserQuery, [user_id]);
+            const sender = senderData.length ? senderData[0] : null;
+
+            const getOrderDateQuery = `SELECT created_at FROM tbl_delivery_order WHERE order_id = ?`;
+            const [orderDateResult] = await database.query(getOrderDateQuery, [order_id]);
+            const order_date_time = moment(orderDateResult[0].created_at).format('DD-MMM YYYY hh:mm a');
+
+            const delivery_time_in_minutes = Math.round(distance_km / 20 * 60); // Assuming 20 km/h avg speed
+            const delivery_date_time = moment(orderDateResult[0].created_at)
+            .add(delivery_time_in_minutes, 'minutes')
+            .format('DD-MMM YYYY hh:mm a'); 
+
             const resp = {
                 pick_up_loc: request_data.pickup_address,
                 drop_off_loc: request_data.dropoff_address,
+                sender: sender,
                 receiver: receiver,
                 item: packageData[0],
                 payment_data: "Cash on delivery",
@@ -216,12 +236,59 @@ class UserModel {
                 delivery_status: "confirmed",
                 distance: `${distance_km} km`,
                 time: `${Math.round(distance_km / 20)} min`,
+                order_date_time: order_date_time,
+                delivery_date_time: delivery_date_time,
                 subtotal: subtotal,
                 tax: orderData.tax,
                 discount: orderData.discount,
                 total_price: total_price,
             };
 
+            const subject = "Cargo Rider - Order Summary";
+            const orderDataEmail = { 
+                order_id: order_id,
+                order_status: resp.order_status,
+                delivery_status: resp.delivery_status,
+                pick_up_loc: resp.pick_up_loc,
+                drop_off_loc: resp.drop_off_loc,
+                
+                receiver: {
+                    name: resp.receiver.full_name,
+                    email: resp.receiver.email_id,
+                    phone: resp.receiver.phone_number,
+                    address: resp.receiver.address,
+                },
+            
+                sender: {
+                    name: resp.sender.full_name,
+                    email: resp.sender.email_id,
+                    phone: resp.sender.phone_number,
+                    address: resp.sender.address,
+                },
+            
+                item: resp.item,
+                distance: resp.distance,
+                time: resp.time,
+                order_date_time: resp.order_date_time,
+                delivery_date_time: resp.delivery_date_time,
+            
+                payment_data: resp.payment_data,
+                subtotal: resp.subtotal,
+                tax: resp.tax,
+                discount: resp.discount,
+                total_price: resp.total_price
+            };
+            
+
+              const email =sender.email_id;
+                
+                try {
+                    const htmlMessage = orderConfirmationEmail(orderDataEmail)
+                    await common.sendMail(subject, email, htmlMessage);
+                    console.log("Order email sent successfully!");
+                } catch (error) {
+                    console.error("Error sending OTP email:", error);
+                }
             return {
                 code: response_code.SUCCESS,
                 message: t('order_created_successfully'),
@@ -343,6 +410,7 @@ class UserModel {
     }
 
     async contactUs(request_data,user_id){
+        console.log("REQUEST DATA",request_data)
         try{
             const data = {
                 full_name: request_data.full_name,
@@ -354,6 +422,24 @@ class UserModel {
 
             const insertContact = `INSERT INTO tbl_contact_us SET ?`;
             const [contactInsert] = await database.query(insertContact, [data]);
+
+            const subject = `Thank you for contacting us!`;
+            const email = request_data.email_address;
+
+            const contact_data = {
+                name: request_data.full_name,
+                email: request_data.email_address,
+                phone: request_data.phone_number,
+                code_id: request_data.code_id
+            }
+
+            try {
+                const htmlMessage = contactUs(contact_data);
+                await common.sendMail(subject, email, htmlMessage);
+                console.log("Contact us Email Sent Success");
+            } catch (error) {
+                console.error("Error sending Contact Us email:", error);
+            }
 
             return {
                 code: response_code.SUCCESS,
